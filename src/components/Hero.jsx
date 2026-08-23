@@ -29,7 +29,7 @@ export default function Hero({ onOrder, onMenu, videoSrc = "/hero.mp4", poster =
             <span className="hero-word"><b>EMET</b><small>Vegan Cafe</small></span>
           </div>
           <h2 className="hero-title">
-            Good Food.<br /><span className="g">Good Energy.</span><br />Good Truth.
+            Good Food.<br /><span className="g">Good Energy.</span><br />Rooted in Truth.
           </h2>
           <p className="hero-sub">
             Plant-based food made with purpose — blended, pressed, and prepared fresh to order.
