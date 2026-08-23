@@ -1,0 +1,11 @@
+{
+  "name": "EMET Vegan Cafe — Staff",
+  "short_name": "EMET Staff",
+  "start_url": "/staff",
+  "display": "standalone",
+  "background_color": "#0A0D0A",
+  "theme_color": "#0A0D0A",
+  "icons": [
+    { "src": "/emet-logo.png", "sizes": "512x512", "type": "image/png" }
+  ]
+}
