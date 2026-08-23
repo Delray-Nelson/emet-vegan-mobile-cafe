@@ -14,12 +14,17 @@ export default function Hero({ onOrder, onMenu, videoSrc = "/hero.mp4", poster =
   return (
     <section className="hero-vid" aria-label="EMET Vegan Cafe">
       <div className="hero-vid-inner">
-        <video
-          className="hero-video"
-          autoPlay muted loop playsInline preload="metadata"
-          poster={poster} aria-hidden="true"
-        >
-          <source src={videoSrc} type="video/mp4" />
+       <video
+            autoPlay
+            loop
+            muted
+            playsInline
+            preload="auto"
+            poster="/hero-poster.jpg"
+            className="w-full h-full object-cover"
+          >
+            <source src="/hero.mp4" type="video/mp4" />
+            Your browser does not support the video tag.
         </video>
         <div className="hero-scrim" aria-hidden="true" />
 
