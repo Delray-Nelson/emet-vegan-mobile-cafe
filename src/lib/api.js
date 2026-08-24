@@ -60,7 +60,7 @@ export const updateOrderStatus = (id, status, staffToken) =>
     staffToken,
   });
 
-export const STAFF_TOKEN = import.meta.env?.VITE_STAFF_TOKEN || "";
+export const STAFF_TOKEN = import.meta.env?.VITE_STAFF_TOKEN || "emet-staff";
 
 // ---------------------------------------------------------------------------
 // Stripe product catalog (dynamic menu).

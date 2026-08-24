@@ -60,8 +60,6 @@ export function isStaff(event) {
 }
 
 // SERVER-SIDE prices, in integer cents. Never trust client-sent amounts.
-// FUTURE: when the Stripe catalog sync lands, resolve line prices from the
-// item's stripePriceId instead of this hard-coded mirror (see docs/ROADMAP.md).
 export const PRICES_CENTS = {
   "sunrise-tropic-boost": 1200,
   "royal-berry-recharge": 1200,
@@ -88,6 +86,61 @@ export const NAMES = {
   "vegan-stir-fry-steak-bowl": "Vegan Stir-Fry Steak Bowl",
   "creamy-emet-alfredo-bowl": "Creamy EMET Alfredo Bowl",
 };
+
+// Delivery fees by ZIP in integer cents
+export const DELIVERY_FEES_CENTS = {
+  "30252": 1400, // McDonough ($14.00)
+  "30253": 1400, // McDonough ($14.00)
+  "30281": 1500, // Stockbridge ($15.00)
+  "30228": 1500, // Hampton ($15.00)
+};
+
+export function getDeliveryFeeCents(zip) {
+  if (!zip) return null;
+  const cleanZip = String(zip).trim().slice(0, 5);
+  return DELIVERY_FEES_CENTS[cleanZip] ?? null;
+}
+
+// Business operating hours (America/New_York)
+// Tue–Thu 12:00–20:00, Fri 13:00–21:00, Sat 13:00–20:00; Sun & Mon closed
+export const BUSINESS_HOURS = {
+  0: null,
+  1: null,
+  2: { open: 12, close: 20 },
+  3: { open: 12, close: 20 },
+  4: { open: 12, close: 20 },
+  5: { open: 13, close: 21 },
+  6: { open: 13, close: 20 },
+};
+
+// Validate delivery window string "YYYY-MM-DDTHH:MM" against business hours + 60-min prep floor
+export function validateWindow(windowId, now = new Date()) {
+  if (!windowId || typeof windowId !== "string") return false;
+  const parts = windowId.split("T");
+  if (parts.length !== 2) return false;
+  const [dateStr, timeStr] = parts;
+  const [hStr, mStr] = timeStr.split(":");
+  const hour = Number(hStr);
+  const minute = Number(mStr);
+  if (Number.isNaN(hour) || Number.isNaN(minute)) return false;
+
+  const targetDate = new Date(`${dateStr}T${String(hour).padStart(2, "0")}:${String(minute).padStart(2, "0")}:00`);
+  if (Number.isNaN(targetDate.getTime())) return false;
+
+  // 60-min prep floor check
+  if (targetDate.getTime() < now.getTime() + 55 * 60 * 1000) {
+    return false;
+  }
+
+  const day = targetDate.getDay();
+  const hours = BUSINESS_HOURS[day];
+  if (!hours) return false;
+
+  if (hour < hours.open || hour >= hours.close) {
+    return false;
+  }
+  return true;
+}
 
 // Validate + price a client cart server-side. Throws on bad input.
 // Returns { items:[{id,qty,name,priceCents}], totalCents }.
