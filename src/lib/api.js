@@ -20,11 +20,23 @@ async function request(path, { method = "GET", body, staffToken } = {}) {
   const headers = { "Content-Type": "application/json" };
   if (staffToken) headers["x-staff-token"] = staffToken;
 
-  const res = await fetch(url(path), {
-    method,
-    headers,
-    body: body ? JSON.stringify(body) : undefined,
-  });
+  let res;
+  try {
+    res = await fetch(url(path), {
+      method,
+      headers,
+      body: body ? JSON.stringify(body) : undefined,
+    });
+  } catch (netErr) {
+    console.error("Network fetch error on path:", path, netErr);
+    const err = new Error(
+      !BASE
+        ? "API URL not configured (VITE_API_BASE is missing in Amplify Environment Variables)."
+        : `Cannot connect to API (${BASE}). Please ensure API Gateway is deployed and CORS is allowed.`
+    );
+    err.status = 0;
+    throw err;
+  }
 
   let data = null;
   const text = await res.text();
