@@ -108,14 +108,6 @@ export default function App() {
       <CategoryNav groups={groups} active={active} onPick={goToSection} />
 
       <div className="store-grid">
-        <aside className="store-rail" aria-label="Categories">
-          {groups.map((g) => (
-            <button key={g.id} className={active === g.id ? "on" : ""} onClick={() => goToSection(g.id)}>
-              {g.category}
-            </button>
-          ))}
-        </aside>
-
         <ProductGrid
           groups={groups}
           sectionRefs={sectionRefs}
