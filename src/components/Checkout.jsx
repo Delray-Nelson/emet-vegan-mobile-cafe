@@ -22,7 +22,7 @@ export default function Checkout() {
   // Delivery Address
   const [address, setAddress] = useState("");
   const [city, setCity] = useState("Locust Grove");
-  const [zip, setZip] = useState("30252");
+  const [zip, setZip] = useState("30248");
   const [instructions, setInstructions] = useState("");
 
   const [submitting, setSubmitting] = useState(false);
@@ -154,22 +154,47 @@ export default function Checkout() {
                 />
               </label>
               <label className="co-field">
-                <span>ZIP Code *</span>
+                <span>ZIP Code (15–20 Mile Radius) *</span>
                 <select
                   value={zip}
-                  onChange={(e) => setZip(e.target.value)}
+                  onChange={(e) => {
+                    const selected = e.target.value;
+                    setZip(selected);
+                    // Automatically update city helper
+                    const CITY_MAP = {
+                      "30248": "Locust Grove",
+                      "30234": "Jenkinsburg",
+                      "30252": "McDonough",
+                      "30253": "McDonough",
+                      "30233": "Jackson",
+                      "30228": "Hampton",
+                      "30250": "Lovejoy",
+                      "30223": "Griffin",
+                      "30224": "Griffin",
+                      "30281": "Stockbridge",
+                      "30236": "Jonesboro",
+                    };
+                    if (CITY_MAP[selected]) setCity(CITY_MAP[selected]);
+                  }}
                   className="co-select"
                 >
-                  <option value="30252">30252 (McDonough - $14 fee)</option>
-                  <option value="30253">30253 (McDonough - $14 fee)</option>
-                  <option value="30281">30281 (Stockbridge - $15 fee)</option>
-                  <option value="30228">30228 (Hampton - $15 fee)</option>
+                  <option value="30248">30248 — Locust Grove (Local Kitchen — $10 fee)</option>
+                  <option value="30234">30234 — Jenkinsburg (~6 mi — $12 fee)</option>
+                  <option value="30252">30252 — McDonough East (~8 mi — $12 fee)</option>
+                  <option value="30253">30253 — McDonough West (~10 mi — $14 fee)</option>
+                  <option value="30233">30233 — Jackson (~12 mi — $14 fee)</option>
+                  <option value="30228">30228 — Hampton (~14 mi — $15 fee)</option>
+                  <option value="30250">30250 — Lovejoy (~14 mi — $15 fee)</option>
+                  <option value="30223">30223 — Griffin East (~15 mi — $15 fee)</option>
+                  <option value="30224">30224 — Griffin West (~18 mi — $16 fee)</option>
+                  <option value="30281">30281 — Stockbridge (~17 mi — $16 fee)</option>
+                  <option value="30236">30236 — Jonesboro (~18 mi — $16 fee)</option>
                 </select>
               </label>
             </div>
 
             {!isZipValid && (
-              <p className="co-err">We currently only service ZIPs: {SERVICED_ZIPS.join(", ")}</p>
+              <p className="co-err">Delivery is currently restricted to a 20-mile radius of Locust Grove (ZIPs: {SERVICED_ZIPS.join(", ")})</p>
             )}
 
             <label className="co-field">

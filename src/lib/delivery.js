@@ -1,11 +1,24 @@
 // Delivery pricing & service area configuration
-// Supported ZIP codes and flat delivery fees in integer cents
+// Full 15-20 Mile Delivery Radius around EMET Kitchen (214 Aster Ave, Locust Grove GA 30248)
+// ZIP codes and standard delivery fees in integer cents
 
 export const DELIVERY_FEES_CENTS = {
-  "30252": 1400, // McDonough ($14.00)
-  "30253": 1400, // McDonough ($14.00)
-  "30281": 1500, // Stockbridge ($15.00)
-  "30228": 1500, // Hampton ($15.00)
+  // 0 – 5 Miles (Immediate Locust Grove area)
+  "30248": 1000, // Locust Grove ($10.00)
+  "30234": 1200, // Jenkinsburg (~6 miles - $12.00)
+  
+  // 5 – 12 Miles (McDonough & Jackson)
+  "30252": 1200, // McDonough East (~8 miles - $12.00)
+  "30253": 1400, // McDonough West (~10 miles - $14.00)
+  "30233": 1400, // Jackson (~12 miles - $14.00)
+
+  // 12 – 20 Miles (Henry, Spalding, Clayton borders)
+  "30228": 1500, // Hampton (~14 miles - $15.00)
+  "30250": 1500, // Lovejoy (~14 miles - $15.00)
+  "30223": 1500, // Griffin East (~15 miles - $15.00)
+  "30224": 1600, // Griffin West (~18 miles - $16.00)
+  "30281": 1600, // Stockbridge (~17 miles - $16.00)
+  "30236": 1600, // Jonesboro South (~18 miles - $16.00)
 };
 
 export const SERVICED_ZIPS = Object.keys(DELIVERY_FEES_CENTS);

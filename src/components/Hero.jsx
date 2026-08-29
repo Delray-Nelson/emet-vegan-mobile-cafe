@@ -7,23 +7,56 @@
 // poster show instead, so it still looks intentional. Decorative → aria-hidden;
 // respects prefers-reduced-motion (video hidden, poster/gradient shown).
 
-import React, { useEffect, useRef } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import { logo } from "../logo.js";
 
 export default function Hero({ onOrder, onMenu, videoSrc = "/hero.mp4", poster = "/hero-poster.jpg" }) {
   const videoRef = useRef(null);
+  const [isPlaying, setIsPlaying] = useState(false);
 
   useEffect(() => {
-    if (videoRef.current) {
-      videoRef.current.defaultMuted = true;
-      videoRef.current.muted = true;
-      const playPromise = videoRef.current.play();
+    const video = videoRef.current;
+    if (!video) return;
+
+    video.defaultMuted = true;
+    video.muted = true;
+    video.playsInline = true;
+
+    const tryPlay = () => {
+      video.muted = true;
+      const playPromise = video.play();
       if (playPromise !== undefined) {
-        playPromise.catch(() => {
-          // Autoplay policy fallback: video remains paused showing poster
-        });
+        playPromise
+          .then(() => setIsPlaying(true))
+          .catch(() => {
+            // Autoplay policy or low power mode fallback
+            setIsPlaying(false);
+          });
       }
-    }
+    };
+
+    tryPlay();
+    video.addEventListener("loadeddata", tryPlay);
+    video.addEventListener("canplay", tryPlay);
+
+    // Also trigger on first interaction anywhere on page in case mobile browser paused it
+    const handleFirstInteraction = () => {
+      if (video.paused) {
+        tryPlay();
+      }
+      window.removeEventListener("touchstart", handleFirstInteraction);
+      window.removeEventListener("click", handleFirstInteraction);
+    };
+
+    window.addEventListener("touchstart", handleFirstInteraction, { passive: true });
+    window.addEventListener("click", handleFirstInteraction, { passive: true });
+
+    return () => {
+      video.removeEventListener("loadeddata", tryPlay);
+      video.removeEventListener("canplay", tryPlay);
+      window.removeEventListener("touchstart", handleFirstInteraction);
+      window.removeEventListener("click", handleFirstInteraction);
+    };
   }, [videoSrc]);
 
   return (
@@ -41,6 +74,7 @@ export default function Hero({ onOrder, onMenu, videoSrc = "/hero.mp4", poster =
           aria-hidden="true"
         >
           <source src={videoSrc} type="video/mp4" />
+          <source src="https://videos.pexels.com/video-files/3195368/3195368-hd_1920_1080_25fps.mp4" type="video/mp4" />
         </video>
         <div className="hero-scrim" aria-hidden="true" />
 
