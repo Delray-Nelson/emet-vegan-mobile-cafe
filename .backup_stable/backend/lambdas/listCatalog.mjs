@@ -18,7 +18,22 @@
 import Stripe from "stripe";
 import { json, preflight } from "./_lib.mjs";
 
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
+const stripe = process.env.STRIPE_SECRET_KEY ? new Stripe(process.env.STRIPE_SECRET_KEY) : null;
+
+// Curated fallback menu items if Stripe is empty or inaccessible
+const CURATED_FALLBACK = [
+  { id: "sunrise-tropic-boost", name: "Sunrise Tropic Boost", priceCents: 1200, category: "Smoothies", img: null, dietary: ["Plant-based", "GF"], description: "Mango, pineapple, orange, banana, ginger, chia, agave.", options: [{ label: "Base", choices: ["Coconut okra water", "Oat milk"] }] },
+  { id: "royal-berry-recharge", name: "Royal Berry Recharge", priceCents: 1200, category: "Smoothies", img: null, dietary: ["Plant-based", "GF"], description: "Strawberry, blueberry, apple, banana, chia, agave.", options: [{ label: "Base", choices: ["Coconut okra water", "Oat milk"] }] },
+  { id: "green-elevation-boost", name: "Green Elevation Boost", priceCents: 1200, category: "Smoothies", img: null, dietary: ["Plant-based", "GF"], description: "Green apple, kiwi, kale, lemon, ginger, agave.", options: [{ label: "Base", choices: ["Coconut okra water", "Oat milk"] }] },
+  { id: "emet-georgia-gold", name: "EMET Georgia Gold", priceCents: 1200, category: "Smoothies", img: null, dietary: ["Plant-based", "GF"], description: "Peaches, carrots, banana, lemon, coconut okra.", options: [{ label: "Base", choices: ["Coconut okra water", "Oat milk"] }] },
+  { id: "liquid-sunshine", name: "Liquid Sunshine", priceCents: 1000, category: "Juices", img: null, dietary: ["Plant-based", "GF"], description: "Yellow watermelon, coconut okra water, agave." },
+  { id: "tropical-sunrise", name: "Tropical Sunrise", priceCents: 1000, category: "Juices", img: null, dietary: ["Plant-based", "GF"], description: "Orange watermelon, coconut okra water, agave." },
+  { id: "emet-garden-wrap", name: "EMET Garden Wrap", priceCents: 1400, category: "Wraps & Handhelds", img: null, dietary: ["Plant-based"], description: "Cucumber, avocado, cherry tomato, cilantro, crispy vegan chick'n, spinach tortilla." },
+  { id: "emet-rolls", name: "EMET Rolls", priceCents: 600, category: "Wraps & Handhelds", img: null, dietary: ["Plant-based"], description: "Two vegan egg rolls with sweet dipping sauce." },
+  { id: "emet-street-tacos", name: "EMET Street Tacos", priceCents: 2000, category: "Wraps & Handhelds", img: null, dietary: ["Plant-based", "New"], description: "Three tacos with shredded lettuce, pico, avocado, beans, cilantro rice.", options: [{ label: "Filling", choices: ["Liquid-smoke mushrooms", "Impossible™ ground"] }] },
+  { id: "vegan-stir-fry-steak-bowl", name: "Vegan Stir-Fry Steak Bowl", priceCents: 2000, category: "Nourish Bowls", img: null, dietary: ["Plant-based", "High-protein"], description: "Vegan steak, broccoli, peppers, onion, jasmine rice." },
+  { id: "creamy-emet-alfredo-bowl", name: "Creamy EMET Alfredo Bowl", priceCents: 2000, category: "Nourish Bowls", img: null, dietary: ["Plant-based"], description: "Linguine, house Alfredo, broccoli, mushrooms." },
+];
 
 export const handler = async (event) => {
   const pre = preflight(event); if (pre) return pre;
@@ -28,6 +43,10 @@ export const handler = async (event) => {
     event.queryStringParameters?.vendorId ||
     null;
 
+  if (!stripe) {
+    return json(200, { items: CURATED_FALLBACK, source: "curated_fallback" });
+  }
+
   try {
     const res = await stripe.products.list({
       active: true,
@@ -35,9 +54,19 @@ export const handler = async (event) => {
       expand: ["data.default_price"],
     });
 
-    const items = res.data
-      .filter((p) => p.default_price && typeof p.default_price === "object")
-      .filter((p) => !vendorFilter || (p.metadata?.vendor_id || null) === vendorFilter)
+    const activeProducts = res.data.filter((p) => p.default_price && typeof p.default_price === "object");
+
+    if (!activeProducts.length) {
+      return json(200, { items: CURATED_FALLBACK, source: "curated_fallback" });
+    }
+
+    const filtered = activeProducts.filter(
+      (p) => !vendorFilter || !p.metadata?.vendor_id || p.metadata?.vendor_id === vendorFilter
+    );
+
+    const itemsToMap = filtered.length ? filtered : activeProducts;
+
+    const items = itemsToMap
       .map((p) => {
         const price = p.default_price;
         const dietary = (p.metadata?.dietary || "")
@@ -60,9 +89,9 @@ export const handler = async (event) => {
       .sort((a, b) => a._sort - b._sort)
       .map(({ _sort, ...rest }) => rest);
 
-    return json(200, { items });
+    return json(200, { items, source: "stripe" });
   } catch (e) {
-    console.error("listCatalog", e);
-    return json(502, { error: "Could not load catalog.", items: [] });
+    console.error("listCatalog error, falling back to curated:", e);
+    return json(200, { items: CURATED_FALLBACK, source: "curated_fallback" });
   }
 };

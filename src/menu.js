@@ -81,9 +81,16 @@ export const MENU = [
 
 export const MENU_BY_ID = Object.fromEntries(MENU.map((m) => [m.id, m]));
 
-/** Group items by category, preserving CATEGORIES order (skips empty categories). */
+/** Group items by category, preserving CATEGORIES order, then appending any new custom Stripe categories (skips empty categories). */
 export function groupByCategory(items = MENU) {
-  return CATEGORIES
+  const categoryOrder = [...CATEGORIES];
+  items.forEach((item) => {
+    if (item.category && !categoryOrder.includes(item.category)) {
+      categoryOrder.push(item.category);
+    }
+  });
+
+  return categoryOrder
     .map((category) => ({ category, id: catId(category), items: items.filter((m) => m.category === category) }))
     .filter((g) => g.items.length > 0);
 }

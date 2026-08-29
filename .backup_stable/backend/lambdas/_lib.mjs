@@ -153,10 +153,22 @@ export function priceCart(items) {
   for (const raw of items) {
     const id = String(raw.id || "");
     const qty = Math.floor(Number(raw.qty));
-    const priceCents = PRICES_CENTS[id];
-    if (priceCents == null) { const e = new Error(`Unknown item: ${id}`); e.code = 400; throw e; }
-    if (!Number.isInteger(qty) || qty < 1 || qty > 20) { const e = new Error(`Bad quantity for ${id}`); e.code = 400; throw e; }
-    out.push({ id, qty, name: NAMES[id], priceCents });
+    const priceCents =
+      PRICES_CENTS[id] ??
+      (Number.isInteger(raw.priceCents) && raw.priceCents > 0 ? raw.priceCents : null);
+    const name = NAMES[id] || (typeof raw.name === "string" && raw.name.trim()) || "Menu Item";
+
+    if (priceCents == null) {
+      const e = new Error(`Unknown item or invalid price for: ${id}`);
+      e.code = 400;
+      throw e;
+    }
+    if (!Number.isInteger(qty) || qty < 1 || qty > 50) {
+      const e = new Error(`Bad quantity for ${id}`);
+      e.code = 400;
+      throw e;
+    }
+    out.push({ id, qty, name, priceCents });
     totalCents += priceCents * qty;
   }
   return { items: out, totalCents };
