@@ -120,6 +120,12 @@
 .cart-fulfill-badge { display: inline-flex; align-items: center; gap: .4rem; margin-top: .6rem;
   background: rgba(114,191,68,.12); border: 1px solid rgba(114,191,68,.3); border-radius: 999px;
   padding: .3rem .75rem; font-size: .78rem; font-weight: 700; color: var(--green); }
+.cart-promo-pill { padding: .5rem 1.1rem 0; }
+.cart-promo-tag { display: flex; align-items: center; gap: .45rem; padding: .45rem .65rem; border-radius: 10px; font-size: .78rem; line-height: 1.25; }
+.cart-promo-tag.unlocked { background: rgba(114,191,68,.16); border: 1px solid var(--green); color: var(--ink); }
+.cart-promo-tag.unlocked strong { color: var(--green); }
+.cart-promo-tag.needed { background: rgba(212,175,55,.12); border: 1px dashed var(--gold); color: var(--ink); }
+.cart-promo-tag.needed strong { color: var(--gold); }
 .cart-seg { flex: 1; border: none; background: none; color: var(--ink-dim); border-radius: 999px;
   padding: .4rem; font-size: .8rem; font-weight: 700; cursor: pointer; font-family: inherit; }
 .cart-seg.on { background: var(--gold); color: #1a1400; }

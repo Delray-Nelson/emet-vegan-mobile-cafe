@@ -7,7 +7,7 @@ import React, { useMemo, useState } from "react";
 import { useLocation, useNavigate, Link } from "react-router-dom";
 import { MENU_BY_ID, usd } from "../menu.js";
 import { createCheckoutSession } from "../lib/api.js";
-import { getDeliveryFeeCents, SERVICED_ZIPS } from "../lib/delivery.js";
+import { getDeliveryFeeCents, SERVICED_ZIPS, calculateOrderBreakdown } from "../lib/delivery.js";
 import { logo } from "../logo.js";
 
 export default function Checkout() {
@@ -28,13 +28,18 @@ export default function Checkout() {
   const [submitting, setSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState(null);
 
+  // Derive item price and subtotal dynamically from cart item (supports Stripe items & curated menu)
   const subtotalCents = useMemo(
-    () => cart.reduce((n, i) => n + (MENU_BY_ID[i.id]?.priceCents || 0) * i.qty, 0),
+    () =>
+      cart.reduce((n, i) => {
+        const price = Number.isInteger(i.priceCents) ? i.priceCents : (MENU_BY_ID[i.id]?.priceCents || 0);
+        return n + price * (i.qty || 1);
+      }, 0),
     [cart]
   );
 
-  const deliveryFeeCents = useMemo(() => getDeliveryFeeCents(zip), [zip]);
-  const isZipValid = deliveryFeeCents !== null;
+  const breakdown = useMemo(() => calculateOrderBreakdown(subtotalCents, zip), [subtotalCents, zip]);
+  const isZipValid = getDeliveryFeeCents(zip) !== null;
 
   // Auto-calculated ETA based on current time + 60m prep + driving transit estimate
   const estimatedDeliveryInfo = useMemo(() => {
@@ -60,10 +65,6 @@ export default function Checkout() {
   const selectedWindowLabel = estimatedDeliveryInfo.label;
   const windowId = estimatedDeliveryInfo.windowId;
 
-  const grandTotalCents = useMemo(() => {
-    return subtotalCents + (deliveryFeeCents || 0);
-  }, [subtotalCents, deliveryFeeCents]);
-
   if (cart.length === 0) {
     return (
       <Shell>
@@ -88,7 +89,12 @@ export default function Checkout() {
     setSubmitting(true);
     try {
       const { url } = await createCheckoutSession({
-        items: cart.map((i) => ({ id: i.id, qty: i.qty })),
+        items: cart.map((i) => ({
+          id: i.id,
+          name: i.name || MENU_BY_ID[i.id]?.name || "Menu Item",
+          priceCents: Number.isInteger(i.priceCents) ? i.priceCents : (MENU_BY_ID[i.id]?.priceCents || 0),
+          qty: i.qty,
+        })),
         windowId,
         customer: { name: name.trim(), phone: phone.trim() },
         delivery: {
@@ -228,11 +234,13 @@ export default function Checkout() {
           <ul className="co-lines">
             {cart.map((i) => {
               const m = MENU_BY_ID[i.id];
+              const name = i.name || m?.name || i.id;
+              const price = Number.isInteger(i.priceCents) ? i.priceCents : (m?.priceCents || 0);
               return (
-                <li key={i.id}>
+                <li key={i.key || i.id}>
                   <span className="co-qty">{i.qty}×</span>
-                  <span className="co-name">{m ? m.name : i.id}</span>
-                  <span className="co-line-price">{usd((m?.priceCents || 0) * i.qty)}</span>
+                  <span className="co-name">{name}</span>
+                  <span className="co-line-price">{usd(price * i.qty)}</span>
                 </li>
               );
             })}
@@ -246,20 +254,57 @@ export default function Checkout() {
             </div>
           </div>
 
+          {/* Promotion Banner */}
+          {breakdown.isPromoEligible ? (
+            <div className="co-promo-unlocked">
+              <span className="co-promo-icon">🎁</span>
+              <div>
+                <strong>$40+ Special Deal Unlocked!</strong>
+                <p>Delivery fee & Sales tax have been waived (Saved {usd(breakdown.savingsCents)}).</p>
+              </div>
+            </div>
+          ) : breakdown.remainingForPromoCents > 0 ? (
+            <div className="co-promo-progress">
+              <span>💡 Add <strong>{usd(breakdown.remainingForPromoCents)}</strong> more for <strong>FREE Delivery & Waived Taxes</strong>!</span>
+            </div>
+          ) : null}
+
           <div className="co-breakdown">
             <div className="co-subline">
               <span>Food subtotal</span>
-              <span>{usd(subtotalCents)}</span>
+              <span>{usd(breakdown.subtotalCents)}</span>
+            </div>
+            <div className="co-subline">
+              <span>Staff kitchen gratuity (18%)</span>
+              <span>{usd(breakdown.gratuityCents)}</span>
+            </div>
+            <div className="co-subline">
+              <span>Estimated sales tax (7%)</span>
+              <span>
+                {breakdown.isPromoEligible ? (
+                  <span className="co-waived"><del>{usd(breakdown.rawTaxCents)}</del> WAIVED</span>
+                ) : (
+                  usd(breakdown.taxCents)
+                )}
+              </span>
             </div>
             <div className="co-subline">
               <span>Delivery fee ({zip})</span>
-              <span>{deliveryFeeCents !== null ? usd(deliveryFeeCents) : "Unsupported ZIP"}</span>
+              <span>
+                {!isZipValid ? (
+                  "Unsupported ZIP"
+                ) : breakdown.isPromoEligible ? (
+                  <span className="co-waived"><del>{usd(breakdown.baseDeliveryFeeCents)}</del> FREE</span>
+                ) : (
+                  usd(breakdown.deliveryFeeCents)
+                )}
+              </span>
             </div>
           </div>
 
           <div className="co-total">
-            <span>Total</span>
-            <span>{usd(grandTotalCents)}</span>
+            <span>Total to pay</span>
+            <span>{usd(breakdown.grandTotalCents)}</span>
           </div>
 
           {submitError && <p className="co-err">{submitError}</p>}
@@ -269,7 +314,7 @@ export default function Checkout() {
             disabled={!canPay}
             onClick={pay}
           >
-            {submitting ? "Redirecting to Stripe…" : `Pay ${usd(grandTotalCents)} with Card / Apple Pay`}
+            {submitting ? "Redirecting to Stripe…" : `Pay ${usd(breakdown.grandTotalCents)} with Card / Apple Pay`}
           </button>
 
           <Link className="co-back" to="/">← Add more items</Link>
@@ -331,6 +376,14 @@ const css = `
 .co-line-price{color:var(--ink);font-weight:700;}
 .co-breakdown{border-top:1px solid var(--border);padding-top:.6rem;margin-top:.4rem;}
 .co-subline{display:flex;justify-content:space-between;font-size:.88rem;color:var(--ink-dim);margin-bottom:.35rem;}
+.co-waived{color:var(--green);font-weight:700;font-size:.82rem;}
+.co-waived del{color:var(--ink-dim);margin-right:.3rem;opacity:.7;}
+.co-promo-unlocked{display:flex;gap:.6rem;align-items:center;background:rgba(114,191,68,.14);border:1px solid var(--green);border-radius:10px;padding:.6rem .75rem;margin:.6rem 0;font-size:.82rem;color:var(--ink);}
+.co-promo-unlocked strong{color:var(--green);display:block;font-size:.86rem;}
+.co-promo-unlocked p{margin:0;color:var(--ink-dim);font-size:.78rem;}
+.co-promo-icon{font-size:1.2rem;flex:none;}
+.co-promo-progress{background:rgba(212,175,55,.1);border:1px dashed var(--gold);border-radius:10px;padding:.55rem .75rem;margin:.6rem 0;font-size:.8rem;color:var(--ink);}
+.co-promo-progress strong{color:var(--gold);}
 .co-total{display:flex;justify-content:space-between;font-weight:800;font-size:1.2rem;color:var(--gold);margin:.8rem 0;border-top:1px dashed var(--border);padding-top:.8rem;}
 .co-pay{width:100%;margin-top:.4rem;padding:.85rem;}
 .co-back{display:block;text-align:center;color:var(--ink-dim);font-size:.9rem;margin-top:.8rem;}

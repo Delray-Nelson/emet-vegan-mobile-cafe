@@ -3,9 +3,10 @@
 // /checkout (slot picker → Stripe). Delivery is present but disabled until the
 // ZIP-based delivery-fee work lands (docs/ROADMAP.md).
 
-import React from "react";
+import React, { useMemo } from "react";
 import { useCart } from "../lib/cart.js";
 import { usd } from "../menu.js";
+import { calculateOrderBreakdown } from "../lib/delivery.js";
 
 const Bag = () => (
   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" aria-hidden>
@@ -15,6 +16,7 @@ const Bag = () => (
 
 export default function CartSidebar({ onCheckout, embedded = false }) {
   const { lines, count, subtotalCents, inc, dec, fulfillment, setFulfillment } = useCart();
+  const breakdown = useMemo(() => calculateOrderBreakdown(subtotalCents, "30252"), [subtotalCents]);
 
   return (
     <div className="cart">
@@ -24,6 +26,20 @@ export default function CartSidebar({ onCheckout, embedded = false }) {
           <span>🚗 Delivery Order</span>
         </div>
       </div>
+
+      {count > 0 && (
+        <div className="cart-promo-pill">
+          {breakdown.isPromoEligible ? (
+            <div className="cart-promo-tag unlocked">
+              <span>🎁</span> <span><strong>$40+ Deal Unlocked!</strong> Free Delivery & Taxes Waived</span>
+            </div>
+          ) : (
+            <div className="cart-promo-tag needed">
+              <span>⚡</span> <span>Add <strong>{usd(breakdown.remainingForPromoCents)}</strong> for <strong>FREE Delivery & No Tax</strong></span>
+            </div>
+          )}
+        </div>
+      )}
 
       {count === 0 ? (
         <div className="cart-empty"><Bag /><p>Your cart is empty. Add something tasty from the menu.</p></div>

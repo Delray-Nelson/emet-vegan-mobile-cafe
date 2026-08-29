@@ -20,6 +20,44 @@ export function isZipServiced(zip) {
   return getDeliveryFeeCents(zip) !== null;
 }
 
+/**
+ * Calculates complete order financials:
+ * - Food Subtotal
+ * - 18% Gratuity
+ * - 7% Sales Tax
+ * - Delivery Fee based on ZIP
+ * - PROMO RULE: If (subtotal + gratuity + taxes) >= $40.00, delivery fee and taxes are waived ($0).
+ */
+export function calculateOrderBreakdown(subtotalCents, zip) {
+  const sub = Math.max(0, subtotalCents || 0);
+  const gratuityCents = Math.round(sub * 0.18); // 18% gratuity
+  const rawTaxCents = Math.round(sub * 0.07); // 7% standard tax
+  const baseDeliveryFeeCents = getDeliveryFeeCents(zip);
+
+  // Check $40.00 qualification threshold (4000 cents)
+  const qualifyingTotal = sub + gratuityCents + rawTaxCents;
+  const isPromoEligible = qualifyingTotal >= 4000;
+
+  const taxCents = isPromoEligible ? 0 : rawTaxCents;
+  const deliveryFeeCents = isPromoEligible ? 0 : (baseDeliveryFeeCents || 0);
+  const grandTotalCents = sub + gratuityCents + taxCents + deliveryFeeCents;
+
+  const remainingForPromoCents = Math.max(0, 4000 - qualifyingTotal);
+
+  return {
+    subtotalCents: sub,
+    gratuityCents,
+    rawTaxCents,
+    taxCents,
+    baseDeliveryFeeCents,
+    deliveryFeeCents,
+    grandTotalCents,
+    isPromoEligible,
+    remainingForPromoCents,
+    savingsCents: isPromoEligible ? (rawTaxCents + (baseDeliveryFeeCents || 0)) : 0,
+  };
+}
+
 // Business operating hours (America/New_York)
 // Tue–Thu 12:00–20:00 (12 PM – 8 PM)
 // Fri 13:00–21:00 (1 PM – 9 PM)
