@@ -1,0 +1,8 @@
+{
+  "name": "EMET Vegan Cafe",
+  "description": "Bold, plant-based vegan cafe storefront with order ahead for pickup, real-time order tracking, and staff counter dashboard.",
+  "requestFramePermissions": [],
+  "majorCapabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
+}

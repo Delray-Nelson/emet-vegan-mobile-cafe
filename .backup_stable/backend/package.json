@@ -1,0 +1,10 @@
+{
+  "name": "emet-tracking-backend",
+  "private": true,
+  "type": "module",
+  "description": "EMET Vegan Cafe order-tracking Lambdas (Stripe → DynamoDB → SNS).",
+  "dependencies": {
+    "stripe": "^16.12.0"
+  },
+  "note": "AWS SDK v3 (@aws-sdk/*) is preinstalled in the Lambda Node 18/20 runtime and is NOT bundled here. Only `stripe` must ship with the function. See docs/DEPLOY.md for packaging (zip each handler with node_modules, or use a Lambda layer)."
+}
