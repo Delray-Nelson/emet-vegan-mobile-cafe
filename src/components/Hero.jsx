@@ -74,7 +74,6 @@ export default function Hero({ onOrder, onMenu, videoSrc = "/hero.mp4", poster =
           aria-hidden="true"
         >
           <source src={videoSrc} type="video/mp4" />
-          <source src="https://videos.pexels.com/video-files/3195368/3195368-hd_1920_1080_25fps.mp4" type="video/mp4" />
         </video>
         <div className="hero-scrim" aria-hidden="true" />
 

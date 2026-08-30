@@ -7,7 +7,7 @@
 /* ---------- minimal sticky header ---------- */
 .hdr { position: sticky; top: 0; z-index: 60; background: rgba(10,13,10,.94);
   backdrop-filter: blur(8px); border-bottom: 1px solid var(--border); }
-.hdr-in { max-width: 1240px; margin: 0 auto; display: grid;
+.hdr-in { max-width: 1280px; margin: 0 auto; display: grid;
   grid-template-columns: auto 1fr auto; align-items: center; gap: 1rem;
   padding: .6rem clamp(.8rem,3vw,1.6rem); }
 .hdr-brand { display: flex; align-items: center; gap: .6rem; min-width: 0; }
@@ -29,7 +29,7 @@
 .hdr-search input:focus { outline: none; border-color: var(--gold); }
 .hdr-search .mag { position: absolute; left: .8rem; top: 50%; transform: translateY(-50%);
   color: var(--ink-dim); font-size: .9rem; }
-.hdr-actions { display: flex; align-items: center; gap: .6rem; }
+.hdr-actions { display: flex; align-items: center; gap: .6rem; justify-self: end; margin-left: auto; }
 .hdr-cart { position: relative; width: 42px; height: 42px; border-radius: 50%;
   background: var(--forest); border: 1px solid var(--border); color: var(--ink);
   font-size: 1.15rem; cursor: pointer; display: flex; align-items: center; justify-content: center; }
@@ -43,7 +43,7 @@
 .hdr-cta:disabled { opacity: .45; cursor: not-allowed; }
 
 /* ---------- vendor banner ---------- */
-.vbanner { max-width: 1240px; margin: 0 auto; padding: 1.4rem clamp(.8rem,3vw,1.6rem) .4rem;
+.vbanner { max-width: 1280px; margin: 0 auto; padding: 1.4rem clamp(.8rem,3vw,1.6rem) .4rem;
   display: flex; align-items: center; gap: 1rem; flex-wrap: wrap; }
 .vbanner h1 { font-family: var(--font-brand); text-transform: uppercase; letter-spacing: .02em;
   color: var(--gold); font-size: clamp(1.5rem,3.2vw,2.1rem); margin: 0; }
@@ -55,7 +55,7 @@
 /* ---------- sticky category bar (horizontal scroll) ---------- */
 .catnav { position: sticky; top: 54px; z-index: 50; background: rgba(10,13,10,.96);
   backdrop-filter: blur(10px); border-bottom: 1px solid var(--border); }
-.catnav-in { max-width: 1380px; margin: 0 auto; display: flex; gap: .6rem; overflow-x: auto;
+.catnav-in { max-width: 1280px; margin: 0 auto; display: flex; gap: .6rem; overflow-x: auto;
   padding: .75rem clamp(.8rem,3vw,1.6rem); scrollbar-width: none; -webkit-overflow-scrolling: touch;
   scroll-behavior: smooth; }
 .catnav-in::-webkit-scrollbar { display: none; }
@@ -67,7 +67,7 @@
   box-shadow: 0 2px 10px rgba(212,175,55,.28); }
 
 /* ---------- main layout body ---------- */
-.store-grid { max-width: 1380px; margin: 0 auto; display: grid;
+.store-grid { max-width: 1280px; margin: 0 auto; display: grid;
   grid-template-columns: minmax(0,1fr) 340px; gap: 1.6rem;
   padding: 1.2rem clamp(.8rem,3vw,1.6rem) 4rem; align-items: start; }
 
@@ -212,8 +212,9 @@
   .msec-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: .85rem; }
 }
 @media (max-width: 560px) {
-  .hdr-in { grid-template-columns: auto 1fr; row-gap: .5rem; }
-  .hdr-search { grid-column: 1 / -1; order: 3; max-width: none; }
+  .hdr-in { grid-template-columns: auto 1fr; row-gap: .6rem; }
+  .hdr-actions { justify-self: end; margin-left: auto; display: flex; align-items: center; gap: .5rem; }
+  .hdr-search { grid-column: 1 / -1; order: 3; max-width: none; width: 100%; }
   .hdr-loc { display: none; }
   .msec-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: .7rem; }
   .pcard-body { padding: .6rem .65rem .75rem; }
@@ -224,7 +225,7 @@
 }
 
 /* ---------- video hero (above the vendor banner) ---------- */
-.hero-vid { max-width: 1240px; margin: .9rem auto 0; padding: 0 clamp(.8rem,3vw,1.6rem); }
+.hero-vid { max-width: 1280px; margin: .9rem auto 0; padding: 0 clamp(.8rem,3vw,1.6rem); }
 .hero-vid-inner { position: relative; border-radius: 25px; overflow: hidden;
   min-height: clamp(360px, 56vh, 520px); display: flex; align-items: flex-end;
   background: radial-gradient(120% 90% at 50% 0, #16211a, #0A0D0A); border: 1px solid var(--border); }
