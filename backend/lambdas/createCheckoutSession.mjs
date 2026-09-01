@@ -12,30 +12,38 @@ import {
 import { getShipdayDeliveryFeeEstimate } from "./_shipday.mjs";
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
-const SITE = process.env.SITE_URL || "https://emet-vegan.shop";
+const SITE = process.env.SITE_URL || process.env.AMPLIFY_URL || "https://emetvegancafe.com";
 
 export const handler = async (event) => {
   const pre = preflight(event); if (pre) return pre;
   try {
+    const origin =
+      event?.headers?.origin ||
+      event?.headers?.Origin ||
+      process.env.SITE_URL ||
+      process.env.AMPLIFY_URL ||
+      "https://emetvegancafe.com";
+    const siteUrl = origin.replace(/\/+$/, "");
+
     const body = parseBody(event);
     const { windowId, customer, delivery } = body;
 
     // 1) Price the cart server-side (never trust client amounts)
     let priced;
     try { priced = priceCart(body.items); }
-    catch (e) { return json(e.code || 400, { error: e.message }); }
+    catch (e) { return json(e.code || 400, { error: e.message }, event); }
 
     // 2) Validate delivery address & ZIP
     const zip = String(delivery?.zip || "").trim();
     const address = String(delivery?.address || "").trim();
     const city = String(delivery?.city || "").trim();
     if (!address || !zip) {
-      return json(400, { error: "Delivery address and ZIP code are required." });
+      return json(400, { error: "Delivery address and ZIP code are required." }, event);
     }
 
     let deliveryFeeCents = getDeliveryFeeCents(zip);
     if (deliveryFeeCents === null) {
-      return json(422, { error: `Delivery is not currently available to ZIP code ${zip}.` });
+      return json(422, { error: `Delivery is not currently available to ZIP code ${zip}.` }, event);
     }
 
     // If Shipday API is configured, attempt real-time rate query from Shipday
@@ -53,11 +61,11 @@ export const handler = async (event) => {
 
     // 3) Validate delivery window (business hours + 60-min prep floor)
     if (!windowId || !validateWindow(windowId)) {
-      return json(409, { error: "Selected delivery window is outside operating hours or violates the 60-minute prep floor." });
+      return json(409, { error: "Selected delivery window is outside operating hours or violates the 60-minute prep floor." }, event);
     }
 
     if (!customer?.name || !customer?.phone) {
-      return json(400, { error: "Name and mobile number are required." });
+      return json(400, { error: "Name and mobile number are required." }, event);
     }
 
     // 4) Compute exact order financials & $40+ promotion waiver
@@ -162,13 +170,13 @@ export const handler = async (event) => {
         windowId,
         promoWaived: isPromoEligible ? "true" : "false",
       },
-      success_url: `${SITE}/order/${orderId}`,
-      cancel_url: `${SITE}/checkout`,
+      success_url: `${siteUrl}/order/${orderId}`,
+      cancel_url: `${siteUrl}/checkout`,
     });
 
-    return json(200, { url: session.url, orderId });
+    return json(200, { url: session.url, orderId }, event);
   } catch (e) {
     console.error("createCheckoutSession", e);
-    return json(500, { error: "Could not start checkout." });
+    return json(500, { error: "Could not start checkout." }, event);
   }
 };

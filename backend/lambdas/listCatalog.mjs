@@ -44,7 +44,7 @@ export const handler = async (event) => {
     null;
 
   if (!stripe) {
-    return json(200, { items: CURATED_FALLBACK, source: "curated_fallback" });
+    return json(200, { items: CURATED_FALLBACK, source: "curated_fallback" }, event);
   }
 
   try {
@@ -57,7 +57,7 @@ export const handler = async (event) => {
     const activeProducts = res.data.filter((p) => p.default_price && typeof p.default_price === "object");
 
     if (!activeProducts.length) {
-      return json(200, { items: CURATED_FALLBACK, source: "curated_fallback" });
+      return json(200, { items: CURATED_FALLBACK, source: "curated_fallback" }, event);
     }
 
     const filtered = activeProducts.filter(
@@ -89,9 +89,9 @@ export const handler = async (event) => {
       .sort((a, b) => a._sort - b._sort)
       .map(({ _sort, ...rest }) => rest);
 
-    return json(200, { items, source: "stripe" });
+    return json(200, { items, source: "stripe" }, event);
   } catch (e) {
     console.error("listCatalog error, falling back to curated:", e);
-    return json(200, { items: CURATED_FALLBACK, source: "curated_fallback" });
+    return json(200, { items: CURATED_FALLBACK, source: "curated_fallback" }, event);
   }
 };

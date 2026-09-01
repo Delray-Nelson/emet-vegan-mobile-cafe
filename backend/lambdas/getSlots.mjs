@@ -23,9 +23,9 @@ export const handler = async (event) => {
         return Number.isNaN(t) ? true : t > now - 5 * 60 * 1000; // small grace
       })
       .sort((a, b) => String(a.slotId).localeCompare(String(b.slotId)));
-    return json(200, { slots });
+    return json(200, { slots }, event);
   } catch (e) {
     console.error("getSlots", e);
-    return json(500, { error: "Could not load slots." });
+    return json(500, { error: "Could not load slots." }, event);
   }
 };

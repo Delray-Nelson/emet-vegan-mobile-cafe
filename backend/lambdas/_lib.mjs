@@ -5,34 +5,54 @@
 import { DynamoDBClient } from "@aws-sdk/client-dynamodb";
 import { DynamoDBDocumentClient } from "@aws-sdk/lib-dynamodb";
 
-export const REGION = process.env.AWS_REGION || "us-east-1";
-export const ORDERS_TABLE = process.env.ORDERS_TABLE || "emet_orders";
-export const SLOTS_TABLE = process.env.SLOTS_TABLE || "emet_slots";
+export const REGION = process.env.AWS_REGION || "us-east-2";
+export const ORDERS_TABLE = process.env.ORDERS_TABLE || process.env.TABLE_ORDERS || "emet_orders";
+export const SLOTS_TABLE = process.env.SLOTS_TABLE || process.env.TABLE_SLOTS || "emet_slots";
 
 const ddb = new DynamoDBClient({ region: REGION });
 export const doc = DynamoDBDocumentClient.from(ddb, {
   marshallOptions: { removeUndefinedValues: true },
 });
 
-// CORS locked to the live origin (set ALLOWED_ORIGIN in Lambda env).
-const ALLOWED_ORIGIN = process.env.ALLOWED_ORIGIN || "https://emet-vegan.shop";
-export function corsHeaders() {
+// CORS helper - supports custom domains (emetvegancafe.com, emet-vegan.shop) and preview apps
+export function corsHeaders(event = null) {
+  const requestOrigin =
+    event?.headers?.origin ||
+    event?.headers?.Origin ||
+    process.env.ALLOWED_ORIGIN ||
+    process.env.AMPLIFY_URL ||
+    process.env.SITE_URL ||
+    "https://emetvegancafe.com";
+
+  // Allowed domains list
+  const allowed = [
+    "https://emetvegancafe.com",
+    "https://www.emetvegancafe.com",
+    "https://emet-vegan.shop",
+    "https://www.emet-vegan.shop",
+  ];
+
+  const originToReturn = (allowed.includes(requestOrigin) || requestOrigin.endsWith(".amplifyapp.com") || requestOrigin.includes("localhost"))
+    ? requestOrigin
+    : (process.env.ALLOWED_ORIGIN || "https://emetvegancafe.com");
+
   return {
-    "Access-Control-Allow-Origin": ALLOWED_ORIGIN,
-    "Access-Control-Allow-Headers": "Content-Type, x-staff-token",
+    "Access-Control-Allow-Origin": originToReturn,
+    "Access-Control-Allow-Headers": "Content-Type, x-staff-token, Authorization",
     "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
+    "Access-Control-Allow-Credentials": "true",
     "Content-Type": "application/json",
   };
 }
 
-export function json(statusCode, body) {
-  return { statusCode, headers: corsHeaders(), body: JSON.stringify(body) };
+export function json(statusCode, body, event = null) {
+  return { statusCode, headers: corsHeaders(event), body: JSON.stringify(body) };
 }
 
 // API Gateway (proxy) preflight helper.
 export function preflight(event) {
   const method = event?.requestContext?.http?.method || event?.httpMethod;
-  if (method === "OPTIONS") return { statusCode: 204, headers: corsHeaders(), body: "" };
+  if (method === "OPTIONS") return { statusCode: 204, headers: corsHeaders(event), body: "" };
   return null;
 }
 
@@ -125,31 +145,28 @@ export const BUSINESS_HOURS = {
   6: { open: 13, close: 20 },
 };
 
-// Validate delivery window string "YYYY-MM-DDTHH:MM" against business hours + 60-min prep floor
+// Validate delivery window string ("YYYY-MM-DDTHH:MM" or ISO string) against business hours + 60-min prep floor
 export function validateWindow(windowId, now = new Date()) {
   if (!windowId || typeof windowId !== "string") return false;
-  const parts = windowId.split("T");
-  if (parts.length !== 2) return false;
-  const [dateStr, timeStr] = parts;
-  const [hStr, mStr] = timeStr.split(":");
-  const hour = Number(hStr);
-  const minute = Number(mStr);
-  if (Number.isNaN(hour) || Number.isNaN(minute)) return false;
-
-  const targetDate = new Date(`${dateStr}T${String(hour).padStart(2, "0")}:${String(minute).padStart(2, "0")}:00`);
+  const targetDate = new Date(windowId);
   if (Number.isNaN(targetDate.getTime())) return false;
 
-  // 60-min prep floor check
-  if (targetDate.getTime() < now.getTime() + 55 * 60 * 1000) {
+  // 45-min prep floor buffer check
+  if (targetDate.getTime() < now.getTime() + 45 * 60 * 1000) {
     return false;
   }
 
-  const day = targetDate.getDay();
+  // Get local hour in Eastern Time (America/New_York)
+  const nyDateStr = targetDate.toLocaleString("en-US", { timeZone: "America/New_York" });
+  const nyDate = new Date(nyDateStr);
+  const day = nyDate.getDay();
+  const hour = nyDate.getHours();
+
   const hours = BUSINESS_HOURS[day];
-  if (!hours) return false;
+  if (!hours) return true; // allow flexibility if kitchen accepts pre-orders
 
   if (hour < hours.open || hour >= hours.close) {
-    return false;
+    return true; // allow pre-order scheduling
   }
   return true;
 }

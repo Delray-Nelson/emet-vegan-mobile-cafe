@@ -29,6 +29,10 @@
 .hdr-search input:focus { outline: none; border-color: var(--gold); }
 .hdr-search .mag { position: absolute; left: .8rem; top: 50%; transform: translateY(-50%);
   color: var(--ink-dim); font-size: .9rem; }
+.hdr-staff-link { display: inline-flex; align-items: center; gap: .3rem; background: var(--forest);
+  border: 1px solid var(--border); color: var(--ink-dim); text-decoration: none; border-radius: 999px;
+  padding: .5rem .9rem; font-size: .82rem; font-weight: 700; transition: all .15s ease; }
+.hdr-staff-link:hover { color: var(--gold); border-color: var(--gold); }
 .hdr-actions { display: flex; align-items: center; gap: .6rem; justify-self: end; margin-left: auto; }
 .hdr-cart { position: relative; width: 42px; height: 42px; border-radius: 50%;
   background: var(--forest); border: 1px solid var(--border); color: var(--ink);

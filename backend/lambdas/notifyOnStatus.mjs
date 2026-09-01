@@ -15,7 +15,7 @@ const MESSAGES = {
   ready: (o) => `EMET Vegan Cafe: order #${short(o.orderId)} is READY for pickup. Come grab it at the counter! 🌿`,
 };
 const short = (v = "") => String(v).replace(/[^a-zA-Z0-9]/g, "").slice(-4).toUpperCase();
-const site = () => process.env.SITE_URL || "https://emet-vegan.shop";
+const site = () => process.env.SITE_URL || process.env.AMPLIFY_URL || "https://emetvegancafe.com";
 
 export const handler = async (event) => {
   for (const rec of event.Records || []) {

@@ -191,30 +191,30 @@ code change. Until then it renders the local menu with placeholders.
 > a table for faster loads — see `docs/ROADMAP.md` §2. The read path above is enough
 > to go live.
 
-### C. Point the domain to Amplify (Route 53)
-`emet-vegan.shop` is registered but not yet connected. Two paths:
+### C. Point the domain to Amplify (Route 53 or DNS Provider)
+Your custom domain is **`emetvegancafe.com`** (and `www.emetvegancafe.com`):
 
-**If the domain is registered in Route 53 (or you move DNS there):**
-1. Amplify → your app → **Hosting → Custom domains → Add domain** → enter
-   `emet-vegan.shop`.
-2. Amplify creates an ACM certificate and shows validation + CNAME/ALIAS records.
-   Because it's Route 53, choose **Update Route 53 automatically** (or it links the
-   hosted zone) — accept the DNS records it proposes.
-3. Map subdomains: `emet-vegan.shop` (root) → your branch, and `www` → redirect to
-   root. Save.
-4. Wait for **Available** (DNS + cert validation can take 15 min–a few hours).
+1. In **Amplify Console** → your app → **Hosting → Custom domains → Add domain** → enter `emetvegancafe.com`.
+2. Map subdomains: `emetvegancafe.com` (root) → your branch, and `www` → redirect to root.
+3. Configure the ACM SSL certificate records and CNAME/ALIAS records with your DNS registrar (Route 53, GoDaddy, Namecheap, Google Domains/Squarespace).
 
-**If DNS stays at your current registrar:** in Amplify add the domain, then copy the
-ACM validation CNAME and the app's CNAME/ALIAS records into your registrar's DNS.
-Same result, manual records.
+### D. AWS Lambda Environment Variables Update
+Ensure the following are set on all deployed Lambdas in the AWS Lambda Console:
+- `ALLOWED_ORIGIN` = `https://emetvegancafe.com`
+- `SITE_URL` = `https://emetvegancafe.com`
+- `STRIPE_SECRET_KEY` = `sk_live_...` (or `sk_test_...`)
+- `STRIPE_WEBHOOK_SECRET` = `whsec_...`
+- `ORDERS_TABLE` = `emet_orders`
+- `SLOTS_TABLE` = `emet_slots`
 
-Then update `SITE_URL` (Lambdas) and `ALLOWED_ORIGIN` to `https://emet-vegan.shop`,
-update the Stripe **live** webhook + `success_url`/`cancel_url` origin, and redeploy.
+### E. API Gateway CORS Check
+If hitting API Gateway from `https://emetvegancafe.com`:
+1. Open **API Gateway Console** → Select your API (`w5nf0u8on8` / `us-east-2`).
+2. Ensure routes `/slots`, `/checkout-session`, `/catalog`, `/orders`, `/orders/{id}` have `OPTIONS` enabled (or Lambda proxy integration enabled).
+3. If using Gateway-level CORS, add `https://emetvegancafe.com` and `https://www.emetvegancafe.com` to **Access-Control-Allow-Origin**.
+4. Click **Deploy API** → Stage: `prod` (or your active stage).
 
-> Until the domain is live, everything works on the Amplify URL — just use that as
-> `SITE_URL`/`ALLOWED_ORIGIN` in the meantime.
-
-### D. Add your hero video
+### F. Add your hero video
 The storefront's top hero plays a looping, muted background video.
 - Put your file at **`public/hero.mp4`** (H.264/MP4, muted; ~5–15s loop, kept small
   — aim under ~5 MB for fast load). Optionally replace **`public/hero-poster.jpg`**

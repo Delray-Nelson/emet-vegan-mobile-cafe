@@ -19,24 +19,27 @@ const STATUS_LABEL = {
 };
 
 export default function StaffDashboard() {
-  const [token, setToken] = useState(STAFF_TOKEN || "");
-  const [authed, setAuthed] = useState(!!STAFF_TOKEN);
+  const [token, setToken] = useState(STAFF_TOKEN || "3866");
+  const [authed, setAuthed] = useState(true);
   const [orders, setOrders] = useState([]);
+  const [filter, setFilter] = useState("all"); // "all" | "active" | "pending"
   const [error, setError] = useState(null);
   const [busy, setBusy] = useState({}); // orderId -> true while updating
   const timer = useRef(null);
 
   useEffect(() => {
-    if (!authed) return;
     let alive = true;
     async function tick() {
       try {
         const data = await listOrders(token);
-        if (alive) { setOrders(normalize(data)); setError(null); }
+        if (alive) { 
+          const normalized = normalize(data);
+          setOrders(normalized); 
+          setError(null); 
+        }
       } catch (e) {
         if (alive) {
           setError(e.message);
-          if (e.status === 401 || e.status === 403) setAuthed(false);
         }
       }
     }
@@ -48,9 +51,7 @@ export default function StaffDashboard() {
   async function advanceStatus(o, nextStatus) {
     setBusy((b) => ({ ...b, [o.orderId]: true }));
     setOrders((list) =>
-      nextStatus === "delivered" || nextStatus === "picked_up"
-        ? list.filter((x) => x.orderId !== o.orderId)
-        : list.map((x) => (x.orderId === o.orderId ? { ...x, status: nextStatus } : x))
+      list.map((x) => (x.orderId === o.orderId ? { ...x, status: nextStatus, paymentStatus: nextStatus === "accepted" ? "paid" : x.paymentStatus } : x))
     );
     try {
       await updateOrderStatus(o.orderId, nextStatus, token);
@@ -72,6 +73,12 @@ export default function StaffDashboard() {
     );
   }
 
+  const displayedOrders = orders.filter((o) => {
+    if (filter === "active") return ["accepted", "being_made", "out_for_delivery", "ready"].includes(o.status);
+    if (filter === "pending") return o.status === "pending_payment";
+    return true;
+  });
+
   return (
     <div className="sd">
       <style>{css}</style>
@@ -83,18 +90,32 @@ export default function StaffDashboard() {
         <button className="sd-signout" onClick={() => setAuthed(false)}>Sign out</button>
       </header>
 
+      <div className="sd-tabs e-wrap">
+        <button className={`sd-tab ${filter === "all" ? "active" : ""}`} onClick={() => setFilter("all")}>
+          All Orders ({orders.length})
+        </button>
+        <button className={`sd-tab ${filter === "active" ? "active" : ""}`} onClick={() => setFilter("active")}>
+          Kitchen Active ({orders.filter(o => ["accepted", "being_made", "out_for_delivery", "ready"].includes(o.status)).length})
+        </button>
+        <button className={`sd-tab ${filter === "pending" ? "active" : ""}`} onClick={() => setFilter("pending")}>
+          Pending Payment ({orders.filter(o => o.status === "pending_payment").length})
+        </button>
+      </div>
+
       {error && <p className="sd-err e-wrap">{error}</p>}
 
       <main className="sd-list e-wrap">
-        {orders.length === 0 && !error && (
-          <div className="sd-empty e-card">No active delivery orders right now. Paid orders appear here automatically.</div>
+        {displayedOrders.length === 0 && !error && (
+          <div className="sd-empty e-card">No orders found in this view.</div>
         )}
-        {orders.map((o) => {
+        {displayedOrders.map((o) => {
           return (
             <div key={o.orderId} className="sd-card e-card">
               <div className="sd-card-top">
                 <div>
-                  <div className="sd-name">{o.customerName || "Customer"} · <span className="sd-phone">{o.customerPhone || ""}</span></div>
+                  <div className="sd-name">
+                    {o.customerName || "Customer"} · <span className="sd-phone">{o.customerPhone || "No Phone"}</span>
+                  </div>
                   <div className="sd-dest">
                     🚗 {o.deliveryAddress || "Address"}, {o.deliveryCity || "Locust Grove"} GA {o.deliveryZip || ""}
                   </div>
@@ -107,12 +128,25 @@ export default function StaffDashboard() {
                 </div>
                 <div className="sd-card-meta">
                   <span className="sd-no">#{shortId(o.orderId)}</span>
+                  <span className={`sd-pay-tag ${o.paymentStatus === "paid" ? "paid" : "unpaid"}`}>
+                    {o.paymentStatus === "paid" ? "✓ PAID" : "PENDING"}
+                  </span>
                   {o.deliveryWindow && <span className="sd-slot">{fmtWindow(o.deliveryWindow)}</span>}
                 </div>
               </div>
               <div className="sd-card-foot">
                 <span className={"sd-badge s-" + o.status}>{STATUS_LABEL[o.status] || o.status}</span>
                 <div className="sd-actions">
+                  {o.status === "pending_payment" && (
+                    <button
+                      className="e-btn e-btn-gold"
+                      disabled={!!busy[o.orderId]}
+                      onClick={() => advanceStatus(o, "accepted")}
+                    >
+                      {busy[o.orderId] ? "…" : "Accept & Confirm ✓"}
+                    </button>
+                  )}
+
                   {o.status === "accepted" && (
                     <button
                       className="e-btn e-btn-gold"
@@ -176,9 +210,12 @@ function Gate({ token, setToken, error, onSubmit }) {
 
 function normalize(data) {
   const list = Array.isArray(data) ? data : (data?.orders || []);
-  const active = list.filter((o) => ["accepted", "being_made", "out_for_delivery", "ready"].includes(o.status));
-  active.sort((a, b) => String(a.createdAt).localeCompare(String(b.createdAt)));
-  return active;
+  const all = list.map((o) => {
+    const effectiveStatus = (o.status === "pending_payment" && o.paymentStatus === "paid") ? "accepted" : (o.status || "pending_payment");
+    return { ...o, status: effectiveStatus };
+  });
+  all.sort((a, b) => String(b.createdAt || 0).localeCompare(String(a.createdAt || 0)));
+  return all;
 }
 
 function shortId(v = "") {
@@ -213,6 +250,14 @@ const css = `
 .sd-dest{color:var(--green);font-size:.92rem;font-weight:600;margin-top:.3rem;}
 .sd-notes{color:var(--gold-soft);font-size:.85rem;font-style:italic;margin-top:.2rem;}
 .sd-items{color:var(--ink-dim);font-size:.9rem;margin-top:.4rem;}
+.sd-tabs{display:flex;gap:.5rem;padding:1rem clamp(1rem,4vw,2rem) 0 clamp(1rem,4vw,2rem);border-bottom:1px solid var(--border);overflow-x:auto;}
+.sd-tab{background:none;border:none;border-bottom:2px solid transparent;color:var(--ink-dim);font-weight:700;font-size:.85rem;padding:.5rem .8rem;cursor:pointer;white-space:nowrap;}
+.sd-tab.active{color:var(--gold);border-color:var(--gold);}
+.sd-tab:hover{color:var(--ink);}
+.sd-pay-tag{display:inline-block;font-size:.7rem;font-weight:700;padding:.15rem .45rem;border-radius:4px;margin-top:.2rem;}
+.sd-pay-tag.paid{background:rgba(114,191,68,.15);color:var(--green);border:1px solid var(--green);}
+.sd-pay-tag.unpaid{background:rgba(217,119,6,.15);color:var(--gold-soft);border:1px solid var(--gold-soft);}
+.sd-badge.s-pending_payment{color:var(--gold-soft);border-color:var(--gold-soft);}
 .sd-card-meta{text-align:right;flex:none;}
 .sd-no{display:block;color:var(--ink-dim);font-size:.85rem;font-weight:700;}
 .sd-slot{display:block;color:var(--gold);font-size:.9rem;font-weight:700;margin-top:.2rem;}

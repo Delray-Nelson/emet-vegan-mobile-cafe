@@ -46,11 +46,11 @@ export const handler = async (event) => {
       },
       ReturnValues: "ALL_NEW",
     }));
-    return json(200, { order: { orderId: id, status: res.Attributes.status } });
+    return json(200, { order: { orderId: id, status: res.Attributes.status } }, event);
   } catch (e) {
     if (e.name === "ConditionalCheckFailedException")
-      return json(409, { error: "That status change isn’t allowed from the order’s current state." });
+      return json(409, { error: "That status change isn’t allowed from the order’s current state." }, event);
     console.error("updateOrderStatus", e);
-    return json(500, { error: "Could not update order." });
+    return json(500, { error: "Could not update order." }, event);
   }
 };

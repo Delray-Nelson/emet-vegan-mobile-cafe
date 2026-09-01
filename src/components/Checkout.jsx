@@ -88,7 +88,7 @@ export default function Checkout() {
     setSubmitError(null);
     setSubmitting(true);
     try {
-      const { url } = await createCheckoutSession({
+      const res = await createCheckoutSession({
         items: cart.map((i) => ({
           id: i.id,
           name: i.name || MENU_BY_ID[i.id]?.name || "Menu Item",
@@ -104,8 +104,9 @@ export default function Checkout() {
           instructions: instructions.trim(),
         },
       });
-      if (!url) throw new Error("No checkout URL returned.");
-      window.location.assign(url); // Hand off to Stripe-hosted checkout
+      const checkoutUrl = res?.url || res?.checkoutUrl;
+      if (!checkoutUrl) throw new Error("No checkout URL returned.");
+      window.location.assign(checkoutUrl); // Hand off to Stripe-hosted checkout
     } catch (e) {
       if (e.status === 422) {
         setSubmitError(e.message || "Delivery is not available to this ZIP code.");
