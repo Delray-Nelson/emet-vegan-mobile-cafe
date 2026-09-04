@@ -32,7 +32,6 @@ export default function Header({ query, onQuery, onOpenCart, onCheckout }) {
         </div>
 
         <div className="hdr-actions">
-          <a href="/staff" className="hdr-staff-link" title="Staff Kitchen Dashboard">👨‍🍳 Staff</a>
           <button className="hdr-cart" onClick={onOpenCart} aria-label={`Cart, ${count} items`}>
             🛒{count > 0 && <span className="hdr-badge">{count}</span>}
           </button>

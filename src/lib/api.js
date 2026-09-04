@@ -65,12 +65,21 @@ export const getOrder = (id) => request(`/orders/${encodeURIComponent(id)}`);
 export const listOrders = (staffToken) =>
   request("/orders", { staffToken });
 
-export const updateOrderStatus = (id, status, staffToken) =>
-  request(`/orders/${encodeURIComponent(id)}/status`, {
-    method: "POST",
-    body: { status },
-    staffToken,
-  });
+export const updateOrderStatus = async (id, status, staffToken) => {
+  try {
+    return await request(`/orders/status`, {
+      method: "POST",
+      body: { orderId: id, status },
+      staffToken,
+    });
+  } catch (err) {
+    return await request(`/orders/${encodeURIComponent(id)}/status`, {
+      method: "POST",
+      body: { status },
+      staffToken,
+    });
+  }
+};
 
 export const STAFF_TOKEN = import.meta.env?.VITE_STAFF_TOKEN || "emet-staff";
 

@@ -19,8 +19,9 @@ const STATUS_LABEL = {
 };
 
 export default function StaffDashboard() {
-  const [token, setToken] = useState(STAFF_TOKEN || "3866");
-  const [authed, setAuthed] = useState(true);
+  const [token, setToken] = useState("");
+  const [authed, setAuthed] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
   const [orders, setOrders] = useState([]);
   const [filter, setFilter] = useState("all"); // "all" | "active" | "pending"
   const [error, setError] = useState(null);
@@ -28,6 +29,7 @@ export default function StaffDashboard() {
   const timer = useRef(null);
 
   useEffect(() => {
+    if (!authed || !token) return;
     let alive = true;
     async function tick() {
       try {
@@ -47,6 +49,39 @@ export default function StaffDashboard() {
     timer.current = setInterval(tick, POLL_MS);
     return () => { alive = false; clearInterval(timer.current); };
   }, [authed, token]);
+
+  async function handleLogin() {
+    const trimmed = token.trim();
+    if (!trimmed) {
+      setError("Please enter the staff access code.");
+      return;
+    }
+    setSubmitting(true);
+    setError(null);
+    try {
+      const data = await listOrders(trimmed);
+      const normalized = normalize(data);
+      setOrders(normalized);
+      setAuthed(true);
+      setError(null);
+    } catch (err) {
+      console.error("Staff auth error:", err);
+      if (err.status === 401 || err.status === 403) {
+        setError("Incorrect staff access code. Please try again.");
+      } else {
+        setError(err.message || "Invalid staff access code.");
+      }
+    } finally {
+      setSubmitting(false);
+    }
+  }
+
+  function handleSignOut() {
+    setAuthed(false);
+    setToken("");
+    setError(null);
+    setOrders([]);
+  }
 
   async function advanceStatus(o, nextStatus) {
     setBusy((b) => ({ ...b, [o.orderId]: true }));
@@ -68,7 +103,8 @@ export default function StaffDashboard() {
         token={token}
         setToken={setToken}
         error={error}
-        onSubmit={() => { if (token.trim()) { setError(null); setAuthed(true); } }}
+        submitting={submitting}
+        onSubmit={handleLogin}
       />
     );
   }
@@ -87,7 +123,7 @@ export default function StaffDashboard() {
           <h1>Delivery Orders Counter</h1>
           <span className="sd-live"><span className="sd-dot" />Live Polling</span>
         </div>
-        <button className="sd-signout" onClick={() => setAuthed(false)}>Sign out</button>
+        <button className="sd-signout" onClick={handleSignOut}>Sign out</button>
       </header>
 
       <div className="sd-tabs e-wrap">
@@ -186,7 +222,7 @@ export default function StaffDashboard() {
   );
 }
 
-function Gate({ token, setToken, error, onSubmit }) {
+function Gate({ token, setToken, error, submitting, onSubmit }) {
   return (
     <div className="sd-gate">
       <style>{css}</style>
@@ -197,12 +233,14 @@ function Gate({ token, setToken, error, onSubmit }) {
           type="password"
           value={token}
           onChange={(e) => setToken(e.target.value)}
-          onKeyDown={(e) => e.key === "Enter" && onSubmit()}
+          onKeyDown={(e) => e.key === "Enter" && !submitting && onSubmit()}
           placeholder="Staff access code"
           autoFocus
         />
         {error && <p className="sd-err">{error}</p>}
-        <button className="e-btn e-btn-gold" onClick={onSubmit}>Open Kitchen View</button>
+        <button className="e-btn e-btn-gold" disabled={submitting} onClick={onSubmit}>
+          {submitting ? "Verifying…" : "Open Kitchen View"}
+        </button>
       </div>
     </div>
   );
