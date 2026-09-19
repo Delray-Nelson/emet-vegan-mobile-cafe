@@ -39,7 +39,7 @@ export function isZipServiced(zip) {
  * - 18% Gratuity
  * - 7% Sales Tax
  * - Delivery Fee based on ZIP
- * - PROMO RULE: If (subtotal + gratuity + taxes) >= $40.00, delivery fee and taxes are waived ($0).
+ * - All fees and taxes apply to all orders regardless of order price.
  */
 export function calculateOrderBreakdown(subtotalCents, zip) {
   const sub = Math.max(0, subtotalCents || 0);
@@ -47,15 +47,9 @@ export function calculateOrderBreakdown(subtotalCents, zip) {
   const rawTaxCents = Math.round(sub * 0.07); // 7% standard tax
   const baseDeliveryFeeCents = getDeliveryFeeCents(zip);
 
-  // Check $40.00 qualification threshold (4000 cents)
-  const qualifyingTotal = sub + gratuityCents + rawTaxCents;
-  const isPromoEligible = qualifyingTotal >= 4000;
-
-  const taxCents = isPromoEligible ? 0 : rawTaxCents;
-  const deliveryFeeCents = isPromoEligible ? 0 : (baseDeliveryFeeCents || 0);
+  const taxCents = rawTaxCents;
+  const deliveryFeeCents = baseDeliveryFeeCents || 0;
   const grandTotalCents = sub + gratuityCents + taxCents + deliveryFeeCents;
-
-  const remainingForPromoCents = Math.max(0, 4000 - qualifyingTotal);
 
   return {
     subtotalCents: sub,
@@ -65,9 +59,9 @@ export function calculateOrderBreakdown(subtotalCents, zip) {
     baseDeliveryFeeCents,
     deliveryFeeCents,
     grandTotalCents,
-    isPromoEligible,
-    remainingForPromoCents,
-    savingsCents: isPromoEligible ? (rawTaxCents + (baseDeliveryFeeCents || 0)) : 0,
+    isPromoEligible: false,
+    remainingForPromoCents: 0,
+    savingsCents: 0,
   };
 }
 

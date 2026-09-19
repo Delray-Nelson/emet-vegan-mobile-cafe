@@ -280,21 +280,6 @@ export default function Checkout() {
             </div>
           </div>
 
-          {/* Promotion Banner */}
-          {breakdown.isPromoEligible ? (
-            <div className="co-promo-unlocked">
-              <span className="co-promo-icon">🎁</span>
-              <div>
-                <strong>$40+ Special Deal Unlocked!</strong>
-                <p>Delivery fee & Sales tax have been waived (Saved {usd(breakdown.savingsCents)}).</p>
-              </div>
-            </div>
-          ) : breakdown.remainingForPromoCents > 0 ? (
-            <div className="co-promo-progress">
-              <span>💡 Add <strong>{usd(breakdown.remainingForPromoCents)}</strong> more for <strong>FREE Delivery & Waived Taxes</strong>!</span>
-            </div>
-          ) : null}
-
           <div className="co-breakdown">
             <div className="co-subline">
               <span>Food subtotal</span>
@@ -306,25 +291,11 @@ export default function Checkout() {
             </div>
             <div className="co-subline">
               <span>Estimated sales tax (7%)</span>
-              <span>
-                {breakdown.isPromoEligible ? (
-                  <span className="co-waived"><del>{usd(breakdown.rawTaxCents)}</del> WAIVED</span>
-                ) : (
-                  usd(breakdown.taxCents)
-                )}
-              </span>
+              <span>{usd(breakdown.taxCents)}</span>
             </div>
             <div className="co-subline">
               <span>Delivery fee ({zip})</span>
-              <span>
-                {!isZipValid ? (
-                  "Unsupported ZIP"
-                ) : breakdown.isPromoEligible ? (
-                  <span className="co-waived"><del>{usd(breakdown.baseDeliveryFeeCents)}</del> FREE</span>
-                ) : (
-                  usd(breakdown.deliveryFeeCents)
-                )}
-              </span>
+              <span>{!isZipValid ? "Unsupported ZIP" : usd(breakdown.deliveryFeeCents)}</span>
             </div>
           </div>
 

@@ -68,18 +68,12 @@ export const handler = async (event) => {
       return json(400, { error: "Name and mobile number are required." }, event);
     }
 
-    // 4) Compute exact order financials & $40+ promotion waiver
+    // 4) Compute exact order financials (Full fees on all orders)
     const baseDeliveryFeeCents = deliveryFeeCents;
     const subtotalCents = priced.totalCents;
     const gratuityCents = Math.round(subtotalCents * 0.18); // 18% gratuity
-    const rawTaxCents = Math.round(subtotalCents * 0.07); // 7% sales tax
-
-    // If (subtotal + gratuity + taxes) >= $40.00 (4000 cents), waive delivery and taxes
-    const qualifyingTotal = subtotalCents + gratuityCents + rawTaxCents;
-    const isPromoEligible = qualifyingTotal >= 4000;
-
-    const finalTaxCents = isPromoEligible ? 0 : rawTaxCents;
-    const finalDeliveryFeeCents = isPromoEligible ? 0 : baseDeliveryFeeCents;
+    const finalTaxCents = Math.round(subtotalCents * 0.07); // 7% sales tax
+    const finalDeliveryFeeCents = baseDeliveryFeeCents;
     const grandTotalCents = subtotalCents + gratuityCents + finalTaxCents + finalDeliveryFeeCents;
 
     const orderId = newOrderId();
@@ -93,11 +87,11 @@ export const handler = async (event) => {
       subtotalCents,
       gratuityCents,
       taxCents: finalTaxCents,
-      rawTaxCents,
+      rawTaxCents: finalTaxCents,
       deliveryFeeCents: finalDeliveryFeeCents,
       baseDeliveryFeeCents,
       totalCents: grandTotalCents,
-      isPromoWaived: isPromoEligible,
+      isPromoWaived: false,
       deliveryWindow: windowId,
       deliveryDate: windowId.split("T")[0],
       deliveryAddress: address,
@@ -168,7 +162,7 @@ export const handler = async (event) => {
         orderId,
         zip,
         windowId,
-        promoWaived: isPromoEligible ? "true" : "false",
+        promoWaived: "false",
       },
       success_url: `${siteUrl}/order/${orderId}`,
       cancel_url: `${siteUrl}/checkout`,

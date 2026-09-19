@@ -86,7 +86,7 @@ export default function StaffDashboard() {
   async function advanceStatus(o, nextStatus) {
     setBusy((b) => ({ ...b, [o.orderId]: true }));
     setOrders((list) =>
-      list.map((x) => (x.orderId === o.orderId ? { ...x, status: nextStatus, paymentStatus: nextStatus === "accepted" ? "paid" : x.paymentStatus } : x))
+      list.map((x) => (x.orderId === o.orderId ? { ...x, status: nextStatus } : x))
     );
     try {
       await updateOrderStatus(o.orderId, nextStatus, token);
@@ -165,7 +165,7 @@ export default function StaffDashboard() {
                 <div className="sd-card-meta">
                   <span className="sd-no">#{shortId(o.orderId)}</span>
                   <span className={`sd-pay-tag ${o.paymentStatus === "paid" ? "paid" : "unpaid"}`}>
-                    {o.paymentStatus === "paid" ? "✓ PAID" : "PENDING"}
+                    {o.paymentStatus === "paid" ? "✓ PAID (Stripe)" : "⚠️ UNPAID (Pending)"}
                   </span>
                   {o.deliveryWindow && <span className="sd-slot">{fmtWindow(o.deliveryWindow)}</span>}
                 </div>
@@ -175,11 +175,15 @@ export default function StaffDashboard() {
                 <div className="sd-actions">
                   {o.status === "pending_payment" && (
                     <button
-                      className="e-btn e-btn-gold"
+                      className="e-btn e-btn-ghost"
                       disabled={!!busy[o.orderId]}
-                      onClick={() => advanceStatus(o, "accepted")}
+                      onClick={() => {
+                        if (confirm(`Order #${shortId(o.orderId)} is UNPAID in Stripe. Accept as manual/cash order?`)) {
+                          advanceStatus(o, "accepted");
+                        }
+                      }}
                     >
-                      {busy[o.orderId] ? "…" : "Accept & Confirm ✓"}
+                      {busy[o.orderId] ? "…" : "Accept (Manual/Cash)"}
                     </button>
                   )}
 
