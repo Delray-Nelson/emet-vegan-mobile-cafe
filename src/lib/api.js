@@ -81,6 +81,10 @@ export const updateOrderStatus = async (id, status, staffToken) => {
   }
 };
 
+export const deleteOrder = async (id, staffToken) => {
+  return updateOrderStatus(id, "cancelled", staffToken);
+};
+
 export const STAFF_TOKEN = import.meta.env?.VITE_STAFF_TOKEN || "emet-staff";
 
 // ---------------------------------------------------------------------------
